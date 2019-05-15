@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+	<style>
+		td{
+			padding:10px !important;
+		}
+		.tbl tr:nth-child(2n + 2){
+			background: #e5e5e5;
+		}
+		.tbl tr:first-child {
+			border-bottom: 1px solid black;
+		}
+		.tbl{
+			width:100%;
+		}
+		
+	</style>
+	<!-- In order for these example API calls to work, this page needs to be run on a web server. 
+		 An alternative option is to install and use 'Web Server for Chrome' which is available in the chrome web store (https://chrome.google.com/webstore/detail/web-server-for-chrome/ofhbbkphhbklhfoeikjpcbhemlocgigb/related?hl=en) 
+	 
+		Values are required to be input for the 'appToken' and 'appName' variables below
+	 -->
+	
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <script>
+		
+		// Add values to the below variables
+		var appToken = "";
+		var appName = "";
+	
+		// Stores the user token of the logged in user
+		var userToken = "Click 'Connect' to get a token";
+		
+		// Checks if a token query string is present, displays it on screen and stores it in the userToken variable
+		window.onload = function() {
+			var urlParams = new URLSearchParams(location.search);
+			if(urlParams.has('token')){
+				userToken =  urlParams.get('token');
+			}
+			else{
+				userToken = "Click 'Connect' to get a token"
+			}
+			document.getElementById('lblToken').innerHTML  = userToken;
+		};
+	
+		// Connect to the Data Farmer Api
+		// Redirects to a login page for validation, this requires you to login with your Data Farmer account and allow access
+		// If valid, returns a token (as a query string) which is used when calling other API functions
+        function Connect() {
+			var url = [location.protocol, '//', location.host, location.pathname].join('');
+			window.location.href = "https://datafarmer.com.au/ApiLogin.aspx?appname=" + appName + "&callback=" + url;
+        }
+		
+		// Get a list of devices that are available to the user associated with the user token
+		function GetDevices(){
+			if(userToken != "Click 'Connect' to get a token"){
+				var settings = {
+					"url": "https://datafarmer.com.au/ServiceV2/DataFarmerService.svc/GetDevices?tkn=" + userToken + "&aptkn=" + appToken,
+					"method": "GET",
+					"timeout": 0,
+				};
+
+				$.ajax(settings).done(function (response) {
+					console.log(response);
+					
+					// Display result on screen
+					var allContent = document.getElementById("dvAllContent");
+					
+					var h = document.createElement("H2")     
+					var sectionTitleText = document.createTextNode("Devices");
+					h.appendChild(sectionTitleText);
+					allContent.appendChild(h);
+					
+					var table = document.createElement("table");
+					table.style.marginTop = "20px";
+					table.style.marginBottom = "40px";
+					table.className = "tbl";
+					
+					var columnHeadingsRow = table.insertRow(-1);
+					
+					var deviceIDCellHeading = columnHeadingsRow.insertCell(-1);
+					deviceIDCellHeading.style.fontWeight = "bold";
+					deviceIDCellHeading.appendChild(document.createTextNode("DeviceID"));
+					
+					var deviceTypeCellHeading = columnHeadingsRow.insertCell(-1);
+					deviceTypeCellHeading.style.fontWeight = "bold";
+					deviceTypeCellHeading.appendChild(document.createTextNode("Device Type"));
+					
+					var displayNameCellHeading = columnHeadingsRow.insertCell(-1);
+					displayNameCellHeading.style.fontWeight = "bold";
+					displayNameCellHeading.appendChild(document.createTextNode("Display Name"));
+					
+					var lastReadingDateCellHeading = columnHeadingsRow.insertCell(-1);
+					lastReadingDateCellHeading.style.fontWeight = "bold";
+					lastReadingDateCellHeading.appendChild(document.createTextNode("Last Reading Date"));
+					
+					var latitudeCellHeading = columnHeadingsRow.insertCell(-1);
+					latitudeCellHeading.style.fontWeight = "bold";
+					latitudeCellHeading.appendChild(document.createTextNode("Latitude"));
+					
+					var longitudeCellHeading = columnHeadingsRow.insertCell(-1);
+					longitudeCellHeading.style.fontWeight = "bold";
+					longitudeCellHeading.appendChild(document.createTextNode("Longitude"));
+					
+					var weatherCellHeading = columnHeadingsRow.insertCell(-1);
+					
+					for (var i = 0; i < response.length; i++) {
+						
+						var row = table.insertRow(-1);
+						
+						var deviceIDCell = row.insertCell(-1);
+						deviceIDCell.appendChild(document.createTextNode(response[i].DeviceID));
+						
+						var deviceTypeCell = row.insertCell(-1);
+						deviceTypeCell.appendChild(document.createTextNode(response[i].DeviceType));
+						
+						var displayNameCell = row.insertCell(-1);
+						displayNameCell.appendChild(document.createTextNode(response[i].DisplayName));
+						
+						var lastReadingDateCell = row.insertCell(-1);
+						var readingDate = response[i].LastReadingDate;
+						readingDate = readingDate.replace(/\//gi, '');
+						readingDate = readingDate.replace(/\(/gi, '');
+						readingDate = readingDate.replace(/\)/gi, '');
+						readingDate = readingDate.replace(/Date/gi, '');
+						
+						var dateInt = parseInt(readingDate, 10);
+						
+						lastReadingDateCell.appendChild(document.createTextNode(new Date(dateInt)));
+						
+						var latitudeCell = row.insertCell(-1);
+						latitudeCell.appendChild(document.createTextNode(response[i].Latitude.toFixed(2)));
+						
+						var longitudeCell = row.insertCell(-1);
+						longitudeCell.appendChild(document.createTextNode(response[i].Longitude.toFixed(2)));
+						
+						// Create button used to get the current weather summary for a station
+						var button = document.createElement("button");
+						button.innerHTML = "Get Weather";
+						button.id = response[i].DeviceID
+						button.setAttribute("data-name", response[i].DisplayName);
+						button.classList.add("btn")
+						button.classList.add("btn-default")
+						
+						button.addEventListener ("click", function() {
+							var h = document.createElement("H2")     
+							var sectionTitleText = document.createTextNode("Current Weather Summary for " + this.getAttribute("data-name"));
+							h.appendChild(sectionTitleText);
+							allContent.appendChild(h);
+							GetCurrentWeatherSummary(this.id);
+						});
+						
+						var weatherCell = row.insertCell(-1);
+						weatherCell.appendChild(button);
+					}
+
+					allContent.appendChild(table);
+					
+				});
+			}
+		}
+		
+		// Get a summary of the current weather conditions for a specified station
+		function GetCurrentWeatherSummary(deviceID){
+			if(userToken != "Click 'Connect' to get a token"){
+				var settings = {
+					"url": "https://datafarmer.com.au/ServiceV2/DataFarmerService.svc/GetCurrentWeatherSummary?tkn=" + lblToken.innerHTML + "&aptkn=O5Gcl85Ukd9833y5tPP3SPvLIGwr0DO9lbUvWtiKAhgMs2pVnc&dvc=" + deviceID,
+					"method": "GET",
+					"timeout": 0,
+				};
+
+				$.ajax(settings).done(function (response) {
+					console.log(response);
+					
+					// Display result on screen
+					var allContent = document.getElementById("dvAllContent");
+					
+					var table = document.createElement("table");
+					table.style.marginTop = "20px";
+					table.style.marginBottom = "40px";
+					table.className = "tbl";
+					
+					var columnHeadingsRow = table.insertRow(-1);
+					
+					var deltaTHeading = columnHeadingsRow.insertCell(-1);
+					deltaTHeading.style.fontWeight = "bold";
+					deltaTHeading.appendChild(document.createTextNode("Current Delta T"));
+					
+					var fireDangerIndexCellHeading = columnHeadingsRow.insertCell(-1);
+					fireDangerIndexCellHeading.style.fontWeight = "bold";
+					fireDangerIndexCellHeading.appendChild(document.createTextNode("Current Fire Danger Index"));
+
+					var humidityCellHeading = columnHeadingsRow.insertCell(-1);
+					humidityCellHeading.style.fontWeight = "bold";
+					humidityCellHeading.appendChild(document.createTextNode("Current Humidity"));
+					
+					var temperatureCellHeading = columnHeadingsRow.insertCell(-1);
+					temperatureCellHeading.style.fontWeight = "bold";
+					temperatureCellHeading.appendChild(document.createTextNode("Current Temparture"));
+					
+					var windCellHeading = columnHeadingsRow.insertCell(-1);
+					windCellHeading.style.fontWeight = "bold";
+					windCellHeading.appendChild(document.createTextNode("Wind"));
+					
+					var rainCellHeading = columnHeadingsRow.insertCell(-1);
+					rainCellHeading.style.fontWeight = "bold";
+					rainCellHeading.appendChild(document.createTextNode("Rain Since 9am"));
+
+					var row = table.insertRow(-1);
+					
+					var deltaTCell = row.insertCell(-1);
+					deltaTCell.appendChild(document.createTextNode(response.CurrentDeltaT + "°C"));
+					
+					var fdiCell = row.insertCell(-1);
+					fdiCell.appendChild(document.createTextNode(response.CurrentFireDangerIndex + " " + response.CurrentFireDangerIndexWarning));
+					
+					var humidityCell = row.insertCell(-1);
+					humidityCell.appendChild(document.createTextNode(response.CurrentHumidity + "%"));
+					
+					var temperatureCell = row.insertCell(-1);
+					temperatureCell.appendChild(document.createTextNode(response.CurrentTemperature + "°C"));
+					
+					var windCell = row.insertCell(-1);
+					windCell.appendChild(document.createTextNode(response.CurrentWindSpeed + "kph " + response.CurrentWindDirectionAsString));
+					
+					var rainCell = row.insertCell(-1);
+					rainCell.appendChild(document.createTextNode(response.RainSince9am + "mm"));
+						
+					allContent.appendChild(table);
+					
+				});
+			}
+		}
+    </script>
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Data Farmer API Samples</h1>
+			</div>
+		</div>
+		<div class="row" style="margin-top:20px;">
+			<div class="col-xs-12">
+				<button id="btnConnect" onclick="Connect()" class="btn btn-primary">Connect</button>
+				<button id="btnGetDevices" onclick="GetDevices()" class="btn btn-primary">Get Devices</button>
+			</div>
+		</div>
+		<div class="row" style="margin-top:20px;">
+			<div class="col-xs-12">
+				<span style="font-weight:bold;">Token:</span><label style="font-weight:normal; margin-left:10px;" id="lblToken"></label>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12">
+				<div id="dvAllContent">
+				
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
